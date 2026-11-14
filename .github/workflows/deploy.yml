@@ -74,9 +74,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: ${{ vars.DEPLOY_REPOSITORY }}
-          # デプロイ先リポジトリだけに書き込める deploy key
-          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          repository: moriT958/homelab
+          ssh-key: ${{ secrets.HOMELAB_DEPLOY_KEY }}
           path: deploy
 
       - name: Point the manifest at the new image and push
