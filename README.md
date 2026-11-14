@@ -9,12 +9,14 @@ mise install
 mise run dev
 ```
 
-| コマンド          | 内容                                     |
-| ----------------- | ---------------------------------------- |
-| `mise run dev`    | webui ビルド -> サーバ起動               |
-| `mise run build`  | 単一バイナリ `bin/cockroach-game` を作る |
-| `mise run test`   | Go のテスト                              |
-| `mise run ui:dev` | Vite dev server (HMR)                    |
+| コマンド                | 内容                                          |
+| ----------------------- | --------------------------------------------- |
+| `mise run dev`          | webui ビルド -> サーバ起動                    |
+| `mise run build`        | 単一バイナリ `bin/cockroach-game` を作る      |
+| `mise run test`         | Go のテスト                                   |
+| `mise run ci`           | CI と同じチェック (lint / vet / test / build) |
+| `mise run docker:build` | コンテナイメージ `cockroach-game:dev` を作る  |
+| `mise run ui:dev`       | Vite dev server (HMR)                         |
 
 ## ディレクトリ構成
 

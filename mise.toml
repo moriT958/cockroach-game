@@ -6,7 +6,7 @@ pnpm = "12"
 [tasks."ui:install"]
 description = "webui の依存をインストール"
 dir = "internal/webui"
-run = "pnpm install"
+run = "pnpm install --frozen-lockfile"
 
 [tasks."ui:build"]
 description = "webui をビルド (internal/webui/dist に出力)"
@@ -31,3 +31,23 @@ run = "go build -o bin/cockroach-game ./cmd/server"
 
 [tasks.test]
 run = "go test ./..."
+
+[tasks."ui:lint"]
+depends = ["ui:install"]
+dir = "internal/webui"
+run = "pnpm lint"
+
+[tasks.ci]
+description = "CI と同じチェックをまとめて実行"
+depends = ["ui:build"]
+run = [
+  { task = "ui:lint" },
+  'test -z "$(gofmt -l cmd internal/game internal/server internal/webui/embed.go)"',
+  "go vet ./cmd/... ./internal/game/... ./internal/server/...",
+  "go test ./cmd/... ./internal/game/... ./internal/server/...",
+  "go build -o /dev/null ./cmd/server",
+]
+
+[tasks."docker:build"]
+description = "コンテナイメージをビルド"
+run = "docker build -t cockroach-game:dev ."

@@ -1,0 +1,105 @@
+name: Deploy
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: read
+
+# リリースは 1 つずつ順番に。
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/morit958/cockroach-game
+
+jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
+  publish:
+    needs: tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # リリースは main からのみ。他のブランチに打ったタグは間違い。
+      - name: Check the tag is on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+      # v1.2.3 -> 1.2.3
+      - id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=sha
+
+      - uses: docker/build-push-action@v6
+        id: build
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    needs: publish
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.publish.outputs.version }}
+      DIGEST: ${{ needs.publish.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.DEPLOY_REPOSITORY }}
+          # デプロイ先リポジトリだけに書き込める deploy key
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          path: deploy
+
+      - name: Point the manifest at the new image and push
+        working-directory: deploy
+        run: |
+          file=k8s/cockroach-game/deployment.yaml
+
+          [ "$(grep -cE "^ *image: ${IMAGE}:" "$file")" = 1 ]
+          sed -i -E "s|^( *image: ${IMAGE}:).*|\1${VERSION}@${DIGEST}|" "$file"
+
+          if git diff --quiet; then
+            echo "Already at ${VERSION}."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "cockroach-game: deploy ${VERSION}" \
+            -m "https://github.com/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}"
+
+          # その間にデプロイ先へ別の push が入っているかもしれない。
+          for attempt in 1 2 3; do
+            git push origin HEAD:main && exit 0
+            git pull --rebase origin main
+          done
+          exit 1

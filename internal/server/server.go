@@ -71,6 +71,7 @@ func New(g *game.Game, assets fs.FS, joinURL string) *Server {
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ok")) })
 	mux.HandleFunc("GET /api/info", s.handleInfo)
 	mux.HandleFunc("GET /ws/screen", s.handleScreen)
 	mux.HandleFunc("GET /ws/play", s.handlePlay)
