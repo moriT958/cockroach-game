@@ -1,5 +1,7 @@
 # Cockroach Game
 
+![gameimage](assets/game.png)
+
 ## 開発
 
 ```sh
