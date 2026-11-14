@@ -2,3 +2,4 @@ bin/
 node_modules/
 internal/webui/dist/
 *.tsbuildinfo
+.claude/settings.local.json
