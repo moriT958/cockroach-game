@@ -81,7 +81,7 @@ jobs:
       - name: Point the manifest at the new image and push
         working-directory: deploy
         run: |
-          file=k8s/cockroach-game/deployment.yaml
+          file=k8s/apps/cockroach-game/cockroach-game/app/deployment.yaml
 
           [ "$(grep -cE "^ *image: ${IMAGE}:" "$file")" = 1 ]
           sed -i -E "s|^( *image: ${IMAGE}:).*|\1${VERSION}@${DIGEST}|" "$file"
